@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Hostel System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Hostel Return System</h1>
+        <p>Advanced Face Recognition & Timer Management for Student Safety</p>
+        
+        <div class="cards">
+            <a href="http://localhost:8501" target="_blank" class="card">
+                <div class="icon">👮</div>
+                <h3>Warden Dashboard</h3>
+                <p>Monitor active timers and alerts.</p>
+            </a>
+            
+            <a href="#" class="card" onclick="alert('Please use the Python script for Face Registration.')">
+                <div class="icon">👤</div>
+                <h3>Student Registration</h3>
+                <p>Register new student faces.</p>
+            </a>
+
+            <a href="#" class="card" onclick="alert('System Status: Online \nBackend: Active \nDatabase: Connected')">
+                <div class="icon">✅</div>
+                <h3>System Status</h3>
+                <p>Check system health.</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

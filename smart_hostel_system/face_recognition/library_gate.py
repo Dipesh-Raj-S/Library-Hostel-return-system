@@ -1,0 +1,68 @@
+import cv2
+import time
+import requests
+from utils import fetch_known_encodings, recognize_face
+
+# Configuration
+API_BASE_URL = "http://localhost:5000"
+LIBRARY_EXIT_ENDPOINT = f"{API_BASE_URL}/library_exit"
+
+def library_gate_loop():
+    print("Initializing Library Gate System...")
+    
+    # Fetch known faces
+    print("Fetching known student encodings...")
+    known_encodings = fetch_known_encodings()
+    print(f"Loaded {len(known_encodings)} students.")
+
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Error: Could not open webcam.")
+        return
+
+    last_recognition_time = 0
+    RECOGNITION_COOLDOWN = 5 # Seconds between API calls for the same person
+
+    print("Library Gate Active. Press 'q' to quit.")
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Optimization: Process every other frame or resize
+        small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+        
+        student_id, name = recognize_face(small_frame, known_encodings)
+
+        if student_id:
+            # Draw box and name (optional, for UI)
+            cv2.putText(frame, f"Detected: {name}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+            current_time = time.time()
+            if current_time - last_recognition_time > RECOGNITION_COOLDOWN:
+                print(f"Student {name} exiting library...")
+                try:
+                    payload = {"student_id": student_id, "duration_minutes": 1} # Short time for testing
+                    response = requests.post(LIBRARY_EXIT_ENDPOINT, json=payload)
+                    if response.status_code == 201:
+                        print(f"Timer started for {name}. Expected arrival in 1 min.")
+                    elif response.status_code == 200:
+                        print(f"Timer already active for {name}.")
+                    else:
+                        print(f"Error starting timer: {response.text}")
+                except Exception as e:
+                    print(f"Network error: {e}")
+                
+                last_recognition_time = current_time
+
+        cv2.imshow('Library Gate', frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    library_gate_loop()
