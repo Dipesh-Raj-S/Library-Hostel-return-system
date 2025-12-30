@@ -15,9 +15,10 @@ def register_student():
     data = request.json
     name = data.get('name')
     face_encoding = data.get('face_encoding') # List of floats
+    block = data.get('block')
 
-    if not name or not face_encoding:
-        return jsonify({'error': 'Missing name or face_encoding'}), 400
+    if not name or not face_encoding or not block:
+        return jsonify({'error': 'Missing name, face_encoding, or block'}), 400
 
     # Check if student already exists (optional, by name for now)
     existing = Student.query.filter_by(name=name).first()
@@ -26,7 +27,8 @@ def register_student():
 
     new_student = Student(
         name=name,
-        face_encoding=json.dumps(face_encoding)
+        face_encoding=json.dumps(face_encoding),
+        block=block
     )
     db.session.add(new_student)
     db.session.commit()
@@ -40,6 +42,7 @@ def get_encodings():
     for student in students:
         encodings[student.id] = {
             'name': student.name,
+            'block': student.block,
             'encoding': json.loads(student.face_encoding)
         }
     return jsonify(encodings), 200
@@ -48,14 +51,25 @@ def get_encodings():
 def library_exit():
     data = request.json
     student_id = data.get('student_id')
-    duration_minutes = data.get('duration_minutes', 10) # Default 10 mins
-
+    # duration_minutes is now determined by block, but we can keep it as optional override if needed, 
+    # OR strictly enforce block rules. Let's strictly enforce for now as per req.
+    
     if not student_id:
         return jsonify({'error': 'Missing student_id'}), 400
 
     student = Student.query.get(student_id)
     if not student:
         return jsonify({'error': 'Student not found'}), 404
+
+    # Determine duration based on block
+    # A-block - 15 mins, D1- 15 mins, D2-15mins, B - 10 mins, C - 10 mins
+    block = student.block.upper()
+    if block in ['A', 'D1', 'D2']:
+        duration_minutes = 15
+    elif block in ['B', 'C']:
+        duration_minutes = 10
+    else:
+        duration_minutes = 10 # Default fallback
 
     # Check if there is already an active trip
     active_trip = Trip.query.filter_by(student_id=student_id, status='active').first()

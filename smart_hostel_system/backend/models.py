@@ -7,12 +7,14 @@ class Student(db.Model):
     name = db.Column(db.String(100), nullable=False)
     # Storing face encoding as a JSON string (list of floats)
     face_encoding = db.Column(db.Text, nullable=False)
+    block = db.Column(db.String(10), nullable=False) # A, B, C, D1, D2
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
+            'block': self.block,
             'created_at': self.created_at.isoformat()
         }
 
@@ -32,6 +34,7 @@ class Trip(db.Model):
             'id': self.id,
             'student_id': self.student_id,
             'student_name': self.student.name,
+            'student_block': self.student.block,
             'start_time': self.start_time.isoformat(),
             'expected_end_time': self.expected_end_time.isoformat(),
             'end_time': self.end_time.isoformat() if self.end_time else None,

@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import time
+from datetime import datetime
 
 # Configuration
 API_BASE_URL = "http://localhost:5000"
@@ -38,14 +39,43 @@ if page == "Active Timers":
         
         with placeholder.container():
             if data:
+                # Convert to DataFrame
                 df = pd.DataFrame(data)
-                # Select relevant columns
-                display_df = df[['student_name', 'start_time', 'expected_end_time', 'status']]
-                st.dataframe(display_df, use_container_width=True)
+                
+                # Calculate remaining time
+                now = datetime.now()
+                df['expected_end_time_dt'] = pd.to_datetime(df['expected_end_time'])
+                
+                def calculate_remaining(row):
+                    remaining = row['expected_end_time_dt'] - now
+                    if remaining.total_seconds() > 0:
+                        mm, ss = divmod(remaining.seconds, 60)
+                        return f"{int(mm):02d}:{int(ss):02d}"
+                    else:
+                        return "Passed"
+                
+                df['Time Remaining'] = df.apply(calculate_remaining, axis=1)
+                
+                # Select and rename columns for display
+                display_df = df[['student_name', 'student_block', 'start_time', 'expected_end_time', 'Time Remaining', 'status']]
+                display_df.columns = ['Student Name', 'Block', 'Start Time', 'Expected Return', 'Time Remaining', 'Status']
+                
+                # Show as a table
+                st.dataframe(
+                    display_df, 
+                    use_container_width=True,
+                    column_config={
+                        "Student Name": st.column_config.TextColumn("Student Name", width="medium"),
+                        "Block": st.column_config.TextColumn("Block", width="small"),
+                        "Time Remaining": st.column_config.TextColumn("Timer", width="small"),
+                        "Status": st.column_config.TextColumn("Status", width="small"),
+                    },
+                    hide_index=True
+                )
             else:
                 st.info("No students currently outside.")
         
-        time.sleep(REFRESH_RATE)
+        time.sleep(1) # Refresh every second for smoother timer
 
 elif page == "Alerts":
     st.header("🚨 Late Alerts")
