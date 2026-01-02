@@ -1,10 +1,16 @@
 import cv2
 from utils import get_face_encoding, register_student_api
 
+DEFAULT_BLOCK = 'D'
+
 def register_face():
-    print("Starting Face Registration...")
-    name = input("Enter Student Name: ")
+    print("Student Registration")
+    name = input("Enter student name: ")
+    block = input("Enter block: ")
     
+    if not block:
+        block = DEFAULT_BLOCK
+
     cap = cv2.VideoCapture(0)
     
     if not cap.isOpened():
@@ -35,7 +41,7 @@ def register_face():
             
             if encoding is not None:
                 print(f"Face encoded for {name}. Sending to server...")
-                res, status = register_student_api(name, encoding)
+                res, status = register_student_api(name, encoding, block)
                 
                 if status == 201:
                     print(f"Success! Student ID: {res.get('student_id')}")

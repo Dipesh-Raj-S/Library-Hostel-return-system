@@ -8,19 +8,19 @@ API_BASE_URL = "http://localhost:5000"
 LIBRARY_EXIT_ENDPOINT = f"{API_BASE_URL}/library_exit"
 
 def library_gate_loop():
-    print("Initializing Library Gate System...")
+    print("Initializing library gate system...")
     
     # Fetch known faces
     print("Fetching known student encodings...")
-    known_encodings = fetch_known_encodings()
-    print(f"Loaded {len(known_encodings)} students.")
+    known_ids, known_encodings, known_names = fetch_known_encodings()
+    print(f"Loaded {len(known_ids)} students.")
 
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("Error: Could not open webcam.")
         return
 
-    last_recognition_time = 0
+    last_recognition_time = {}
     RECOGNITION_COOLDOWN = 5 # Seconds between API calls for the same person
 
     print("Library Gate Active. Press 'q' to quit.")
@@ -33,34 +33,37 @@ def library_gate_loop():
         
         frame = cv2.flip(frame, 1)
 
-        # Optimization: Process every other frame or resize
+        # performance optimization
         small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
         
-        student_id, name = recognize_face(small_frame, known_encodings)
+        student_id, name = recognize_face(small_frame, known_ids, known_encodings, known_names)
 
         if student_id:
             # Draw box and name
             cv2.putText(frame, f"Detected: {name}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             
-            current_time = time.time()
-            if current_time - last_recognition_time > RECOGNITION_COOLDOWN:
+            now = time.time()
+            last_seen = last_recognition_time.get(student_id, 0)
+            if now - last_seen > RECOGNITION_COOLDOWN:
                 print(f"Student {name} exiting library...")
 
                 try:
-                    payload = {"student_id": student_id, "duration_minutes": 1} # Short time for testing
-                    res = requests.post(LIBRARY_EXIT_ENDPOINT, json=payload)
+                    TRIP_TIME = 10 # to change 
+
+                    payload = {"student_id": student_id, "duration_minutes": TRIP_TIME} 
+                    res = requests.post(LIBRARY_EXIT_ENDPOINT, json=payload, timeout=10)
 
                     if res.status_code == 201:
-                        print(f"Timer started for {name}. Expected arrival in 1 min.")
-                    elif response.status_code == 200:
+                        print(f"Timer started for {name}. Expected arrival in {TRIP_TIME} min.")
+                    elif res.status_code == 200:
                         print(f"Timer already active for {name}.")
                     else:
-                        print(f"Error starting timer: {response.text}")
+                        print(f"Server error: {res.text}")
 
                 except Exception as e:
                     print(f"Network error: {e}")
                 
-                last_recognition_time = current_time
+                last_recognition_time[student_id] = now
 
         cv2.imshow('Library Gate', frame)
 
