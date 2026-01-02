@@ -1,6 +1,6 @@
 @echo off
 REM === Go to project root ===
-cd /d "C:\Users\dipes\OneDrive\Desktop\coding\MDP\Library-Hostel-return-system\smart_hostel_system"
+cd /d "C:\Users\dipes\OneDrive\Desktop\coding\MDP\Library-Hostel-return-system"
 
 REM === Activate virtual environment ===
 call "venv\Scripts\activate.bat"
