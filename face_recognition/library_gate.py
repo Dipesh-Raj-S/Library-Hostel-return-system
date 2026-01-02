@@ -24,11 +24,14 @@ def library_gate_loop():
     RECOGNITION_COOLDOWN = 5 # Seconds between API calls for the same person
 
     print("Library Gate Active. Press 'q' to quit.")
+    cv2.namedWindow("Library Gate")
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
+        
+        frame = cv2.flip(frame, 1)
 
         # Optimization: Process every other frame or resize
         small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
@@ -36,21 +39,24 @@ def library_gate_loop():
         student_id, name = recognize_face(small_frame, known_encodings)
 
         if student_id:
-            # Draw box and name (optional, for UI)
+            # Draw box and name
             cv2.putText(frame, f"Detected: {name}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             
             current_time = time.time()
             if current_time - last_recognition_time > RECOGNITION_COOLDOWN:
                 print(f"Student {name} exiting library...")
+
                 try:
                     payload = {"student_id": student_id, "duration_minutes": 1} # Short time for testing
-                    response = requests.post(LIBRARY_EXIT_ENDPOINT, json=payload)
-                    if response.status_code == 201:
+                    res = requests.post(LIBRARY_EXIT_ENDPOINT, json=payload)
+
+                    if res.status_code == 201:
                         print(f"Timer started for {name}. Expected arrival in 1 min.")
                     elif response.status_code == 200:
                         print(f"Timer already active for {name}.")
                     else:
                         print(f"Error starting timer: {response.text}")
+
                 except Exception as e:
                     print(f"Network error: {e}")
                 
@@ -58,7 +64,10 @@ def library_gate_loop():
 
         cv2.imshow('Library Gate', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        key = cv2.waitKey(1) & 0xFF
+        if cv2.getWindowProperty("Library Gate", cv2.WND_PROP_VISIBLE) < 1:
+            break
+        if key == ord('q'):
             break
 
     cap.release()

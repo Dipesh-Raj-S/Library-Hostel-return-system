@@ -1,5 +1,4 @@
 import cv2
-import time
 from utils import get_face_encoding, register_student_api
 
 def register_face():
@@ -13,29 +12,36 @@ def register_face():
         return
 
     print("Press 's' to capture face, 'q' to quit.")
+    cv2.namedWindow("Register Face")
 
     while True:
         ret, frame = cap.read()
         if not ret:
             print("Failed to grab frame")
             break
-
+        
+        frame = cv2.flip(frame, 1)   # lateral inversion
         cv2.imshow('Register Face', frame)
 
         key = cv2.waitKey(1) & 0xFF
+
+        # exit if X is clicked
+        if cv2.getWindowProperty("Register Face", cv2.WND_PROP_VISIBLE) < 1: 
+            break 
+
         if key == ord('s'):
             print("Capturing...")
             encoding = get_face_encoding(frame)
             
             if encoding is not None:
                 print(f"Face encoded for {name}. Sending to server...")
-                response, status = register_student_api(name, encoding)
+                res, status = register_student_api(name, encoding)
                 
                 if status == 201:
-                    print(f"Success! Student ID: {response.get('student_id')}")
+                    print(f"Success! Student ID: {res.get('student_id')}")
                     break
                 else:
-                    print(f"Registration failed: {response}")
+                    print(f"Registration failed: {res}")
             else:
                 print("Try again.")
         
