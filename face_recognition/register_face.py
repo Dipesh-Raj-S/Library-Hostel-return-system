@@ -1,5 +1,6 @@
 import cv2
 from utils import get_face_encoding, register_student_api
+from face_recognition import face_locations
 
 DEFAULT_BLOCK = 'D'
 
@@ -27,6 +28,28 @@ def register_face():
             break
         
         frame = cv2.flip(frame, 1)   # lateral inversion
+
+        # draw boxes around faces
+        rgb = frame[:, :, ::-1]
+        boxes = face_locations(rgb)
+
+        for t, r, b, l in boxes:
+            cv2.rectangle(frame, (l, t), (r, b), (0, 255, 0), 2)
+
+        # warnings or hint
+        message = None
+
+        if len(boxes) == 0:
+            message = "No face detected"
+        elif len(boxes) > 1:
+            message = "Multiple faces detected"
+        else:
+            # non-intrusive hint
+            cv2.putText(frame, "Ensure only one face is visible", (20, frame.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
+
+        if message:
+            cv2.putText(frame, message, (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
+
         cv2.imshow('Register Face', frame)
 
         key = cv2.waitKey(1) & 0xFF
