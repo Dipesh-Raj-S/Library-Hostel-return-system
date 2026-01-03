@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import requests
 import pandas as pd
 import time
@@ -42,7 +43,8 @@ if page == "Active Timers":
     
     placeholder = st.empty()
     
-    st.autorefresh(interval=1000, key="active_timers")
+    st_autorefresh(interval=1000, key="active_timers_refresh")
+
 
     data = fetch_data("active_timers")
         
@@ -94,7 +96,8 @@ elif page == "Alerts":
     
     data = fetch_data("alerts")
     
-    st.autorefresh(interval=5000, key="alerts")
+    st_autorefresh(interval=5000, key="alerts")
+
 
         
     with placeholder.container():
