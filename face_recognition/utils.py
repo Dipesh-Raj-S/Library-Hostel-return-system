@@ -1,7 +1,6 @@
 from requests.exceptions import RequestException 
 import requests
 import face_recognition
-import cv2
 import numpy as np
 
 # Configuration
@@ -16,11 +15,9 @@ def get_face_encoding(frame):
     boxes = face_recognition.face_locations(rgb, model="hog")
 
     if len(boxes) == 0:
-        print("No face detected.")
         return None
 
     if len(boxes) > 1:
-        print("Multiple faces detected. Please ensure only one person is in frame.")
         return None
         
     encodings = face_recognition.face_encodings(rgb, boxes)
@@ -42,12 +39,10 @@ def register_student_api(name, encoding, block):
         try:
             data = res.json()
         except ValueError:
-            print("Server did not return JSON:", res.text)
             return None, 500
         return data, res.status_code
 
     except RequestException as e:
-        print(f"Error connecting to backend: {e}")
         return None, 500
 
 def fetch_known_encodings():
