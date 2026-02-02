@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 import requests
 import pandas as pd
 import time
@@ -25,7 +24,7 @@ st.set_page_config(
 st.title("👮 Smart Hostel Warden Dashboard")
 
 # Sidebar for navigation
-page = st.sidebar.selectbox("Navigation", ["Active Timers", "Alerts", "Student Logs","Register Student"])
+page = st.sidebar.selectbox("Navigation", ["Active Timers", "Alerts", "Student Logs"])
 
 def fetch_data(endpoint):
     try:
@@ -40,12 +39,7 @@ def fetch_data(endpoint):
 if page == "Active Timers":
     st.header("⏳ Active Library Trips")
     
-    
     placeholder = st.empty()
-    
-    st_autorefresh(interval=1000, key="active_timers_refresh")
-
-
     data = fetch_data("active_timers")
         
     with placeholder.container():
@@ -85,20 +79,14 @@ if page == "Active Timers":
             )
         else:
             st.info("No students currently outside.")
+    
+    time.sleep(REFRESH_RATE)
         
-       
-
 elif page == "Alerts":
     st.header("🚨 Late Alerts")
     
     placeholder = st.empty()
-    
-    
     data = fetch_data("alerts")
-    
-    st_autorefresh(interval=5000, key="alerts")
-
-
         
     with placeholder.container():
         if data:
@@ -120,52 +108,48 @@ elif page == "Student Logs":
     # Let's just show a placeholder or fetch all if we add that endpoint later.
     st.info("Log history feature coming soon. (Requires /all_trips endpoint)")
 
-elif page == "Register Student":
-    st.header("🧑‍🎓 Register New Student")
+# elif page == "Register Student":
+#     st.header("🧑‍🎓 Register New Student")
 
-    name = st.text_input("Student Name")
-    block = st.text_input("Block", value="D")
+#     name = st.text_input("Student Name")
+#     block = st.text_input("Block", value="D")
 
-    start_cam = st.button("Start Camera")
-    capture = st.button("Capture & Register")
-    stop_cam = st.button("Stop Camera")
-    if start_cam and st.session_state.cap is None:
-        st.session_state.cap = cv2.VideoCapture(0)
-    frame_placeholder = st.empty()
+#     start_cam = st.button("Start Camera")
+#     capture = st.button("Capture & Register")
+#     stop_cam = st.button("Stop Camera")
+#     if start_cam and st.session_state.cap is None:
+#         st.session_state.cap = cv2.VideoCapture(0)
+#     frame_placeholder = st.empty()
 
-    if st.session_state.cap:
-        ret, frame = st.session_state.cap.read()
-        if ret:
-            frame = cv2.flip(frame, 1)
-            rgb = frame[:, :, ::-1]
-            boxes = face_locations(rgb)
+#     if st.session_state.cap:
+#         ret, frame = st.session_state.cap.read()
+#         if ret:
+#             frame = cv2.flip(frame, 1)
+#             rgb = frame[:, :, ::-1]
+#             boxes = face_locations(rgb)
 
-            for t, r, b, l in boxes:
-                cv2.rectangle(frame, (l, t), (r, b), (0, 255, 0), 2)
+#             for t, r, b, l in boxes:
+#                 cv2.rectangle(frame, (l, t), (r, b), (0, 255, 0), 2)
 
-            frame_placeholder.image(frame, channels="BGR")
-    if capture:
-        if not name:
-            st.error("Enter student name")
-        elif st.session_state.cap is None:
-            st.error("Start the camera first")
-        else:
-            ret, frame = st.session_state.cap.read()
-            if ret:
-                encoding = get_face_encoding(frame)
+#             frame_placeholder.image(frame, channels="BGR")
+#     if capture:
+#         if not name:
+#             st.error("Enter student name")
+#         elif st.session_state.cap is None:
+#             st.error("Start the camera first")
+#         else:
+#             ret, frame = st.session_state.cap.read()
+#             if ret:
+#                 encoding = get_face_encoding(frame)
 
-                if encoding is not None:
-                    res, status = register_student_api(name, encoding, block)
-                    if status == 201:
-                        st.success(f"Student registered. ID: {res.get('student_id')}")
-                    else:
-                        st.error("Registration failed")
-                else:
-                    st.warning("No valid face detected")
-    if stop_cam and st.session_state.cap:
-        st.session_state.cap.release()
-        st.session_state.cap = None
-
-
-
-
+#                 if encoding is not None:
+#                     res, status = register_student_api(name, encoding, block)
+#                     if status == 201:
+#                         st.success(f"Student registered. ID: {res.get('student_id')}")
+#                     else:
+#                         st.error("Registration failed")
+#                 else:
+#                     st.warning("No valid face detected")
+#     if stop_cam and st.session_state.cap:
+#         st.session_state.cap.release()
+#         st.session_state.cap = None
