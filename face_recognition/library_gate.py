@@ -42,7 +42,7 @@ def library_gate_loop():
         student_id, name = recognize_face(small_frame, known_ids, known_encodings, known_names)
 
         boxes = face_locations(rgb_small)
-        draw_boxes(frame, boxes, student_id)
+        draw_boxes(frame, boxes, name)
 
         if student_id:
             now = time.time()

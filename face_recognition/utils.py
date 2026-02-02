@@ -98,6 +98,9 @@ def recognize_face(image, student_ids, names, encodings):
     return None, None
 
 def draw_boxes(frame, boxes, name):
+    if not name:
+        name = "Unknown"
+
     for (t, r, b, l) in boxes:
         # scale back to full size
         t *= 2
@@ -113,7 +116,7 @@ def draw_boxes(frame, boxes, name):
         # draw rectangle
         cv2.rectangle(frame, (l, t), (r, b), (0, 255, 0), 2)
 
-        label = name if name else "Unknown"
+        label = name
 
         # get text size to fit label background
         (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
