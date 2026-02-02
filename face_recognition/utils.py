@@ -2,6 +2,7 @@ from requests.exceptions import RequestException
 import requests
 import face_recognition
 import numpy as np
+import cv2
 
 # Configuration
 API_BASE_URL = "http://localhost:5000" 
@@ -95,3 +96,37 @@ def recognize_face(image, student_ids, names, encodings):
         return student_ids[best], names[best]
 
     return None, None
+
+def draw_boxes(frame, boxes, name):
+    for (t, r, b, l) in boxes:
+        # scale back to full size
+        t *= 2
+        r *= 2
+        b *= 2
+        l *= 2
+
+        # increase box padding
+        pad = int((b-t) * 0.10)
+        t = max(0, t-pad)
+        b += pad
+
+        # draw rectangle
+        cv2.rectangle(frame, (l, t), (r, b), (0, 255, 0), 2)
+
+        label = name if name else "Unknown"
+
+        # get text size to fit label background
+        (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+
+        # Background rectangle above the box
+        label_top = max(0, t-text_h-8)
+        label_bottom = t
+
+        cv2.rectangle(frame, (l, label_top), (l+text_w+8, label_bottom), (0, 255, 0), -1)
+
+        # Put the text inside the label background
+        cv2.putText(frame, label, (l+4, label_bottom - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
+
+        # background
+        # cv2.rectangle(frame, (l, b - 25), (r, b), (0, 255, 0), cv2.FILLED)
+        # cv2.putText(frame, label, (l+6, b-6), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
