@@ -47,12 +47,10 @@ def get_encodings():
         }
     return jsonify(encodings), 200
 
-@api.route('/library_exit', methods=['POST'])
-def library_exit():
+@api.route('/scan_library', methods=['POST'])
+def scan_library():
     data = request.json
     student_id = data.get('student_id')
-    # duration_minutes is now determined by block, but we can keep it as optional override if needed, 
-    # OR strictly enforce block rules. Let's strictly enforce for now as per req.
     
     if not student_id:
         return jsonify({'error': 'Missing student_id'}), 400
@@ -61,20 +59,44 @@ def library_exit():
     if not student:
         return jsonify({'error': 'Student not found'}), 404
 
-    # Determine duration based on block
-    # A-block - 15 mins, D1- 15 mins, D2-15mins, B - 10 mins, C - 10 mins
+    # Check for active trip
+    active_trip = Trip.query.filter_by(student_id=student_id, status='active').first()
+
+    if active_trip:
+        if active_trip.direction == "Hostel -> Library":
+            # ARRIVAL at Library: End the "Hostel -> Library" timer
+            active_trip.end_time = datetime.now()
+            
+            # Check for late
+            if active_trip.end_time > active_trip.expected_end_time:
+                active_trip.status = 'late'
+                active_trip.is_alert = True
+                active_trip.exceeded_limit = True
+            else:
+                active_trip.status = 'completed'
+            
+            db.session.commit()
+            cancel_trip_check(active_trip.id)
+            
+            return jsonify({
+                'message': 'Journey "Hostel -> Library" completed.',
+                'status': active_trip.status,
+                'open_gate': True
+            }), 200
+            
+        elif active_trip.direction == "Library -> Hostel":
+             # Already detected at Library recently, ignore or debounce
+             return jsonify({'message': 'Timer "Library -> Hostel" already running.', 'open_gate': False}), 200
+    
+    # START new trip: Library -> Hostel
+    # Calculate duration
     block = student.block.upper()
     if block in ['A', 'D1', 'D2']:
         duration_minutes = 15
     elif block in ['B', 'C']:
         duration_minutes = 10
     else:
-        duration_minutes = 10 # Default fallback
-
-    # Check if there is already an active trip
-    active_trip = Trip.query.filter_by(student_id=student_id, status='active').first()
-    if active_trip:
-        return jsonify({'message': 'Trip already active', 'trip_id': active_trip.id}), 200
+        duration_minutes = 10 
 
     start_time = datetime.now()
     expected_end_time = start_time + timedelta(minutes=duration_minutes)
@@ -83,53 +105,97 @@ def library_exit():
         student_id=student_id,
         start_time=start_time,
         expected_end_time=expected_end_time,
-        status='active'
+        status='active',
+        direction="Library -> Hostel",
+        start_location="Library",
+        end_location="Hostel"
     )
     db.session.add(new_trip)
     db.session.commit()
 
-    # Schedule the timer check
     schedule_trip_check(current_app._get_current_object(), new_trip.id, expected_end_time)
 
     return jsonify({
-        'message': 'Trip started',
+        'message': 'Started timer "Library -> Hostel"',
         'trip_id': new_trip.id,
-        'expected_end_time': expected_end_time.isoformat()
+        'expected_end_time': expected_end_time.isoformat(),
+        'open_gate': True
     }), 201
 
-@api.route('/hostel_entry', methods=['POST'])
-def hostel_entry():
+
+@api.route('/scan_hostel', methods=['POST'])
+def scan_hostel():
     data = request.json
     student_id = data.get('student_id')
 
     if not student_id:
         return jsonify({'error': 'Missing student_id'}), 400
 
-    # Find active trip
-    trip = Trip.query.filter_by(student_id=student_id, status='active').first()
-    
-    if not trip:
-        # If no active trip, maybe just open the gate anyway? Or deny?
-        # For this project, let's assume valid entry but log it or just return OK.
-        # But strictly, if they didn't exit library, maybe they are just entering normally.
-        # Let's return a specific message so the client knows.
-        return jsonify({'message': 'No active library trip found, but entry allowed', 'open_gate': True}), 200
+    student = Student.query.get(student_id)
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
 
-    trip.end_time = datetime.now()
-    
-    # Check if late (redundant if scheduler hasn't fired, but good for immediate feedback)
-    if trip.end_time > trip.expected_end_time:
-        trip.status = 'late'
-        trip.is_alert = True
+    # Check for active trip
+    active_trip = Trip.query.filter_by(student_id=student_id, status='active').first()
+
+    if active_trip:
+        if active_trip.direction == "Library -> Hostel":
+            # ARRIVAL at Hostel: End the "Library -> Hostel" timer
+            active_trip.end_time = datetime.now()
+            
+            if active_trip.end_time > active_trip.expected_end_time:
+                active_trip.status = 'late'
+                active_trip.is_alert = True
+                active_trip.exceeded_limit = True
+            else:
+                active_trip.status = 'completed'
+            
+            db.session.commit()
+            cancel_trip_check(active_trip.id)
+            
+            return jsonify({
+                'message': 'Journey "Library -> Hostel" completed.',
+                'status': active_trip.status,
+                'open_gate': True
+            }), 200
+        
+        elif active_trip.direction == "Hostel -> Library":
+            # Already active, recently started
+             return jsonify({'message': 'Timer "Hostel -> Library" already running.', 'open_gate': False}), 200
+
+    # START new trip: Hostel -> Library
+    # Calculate duration (SAME limits apply)
+    block = student.block.upper()
+    if block in ['A', 'D1', 'D2']:
+        duration_minutes = 15
+    elif block in ['B', 'C']:
+        duration_minutes = 10
     else:
-        trip.status = 'completed'
-    
+        duration_minutes = 10 
+
+    start_time = datetime.now()
+    expected_end_time = start_time + timedelta(minutes=duration_minutes)
+
+    new_trip = Trip(
+        student_id=student_id,
+        start_time=start_time,
+        expected_end_time=expected_end_time,
+        status='active',
+        direction="Hostel -> Library",
+        start_location="Hostel",
+        end_location="Library"
+    )
+    db.session.add(new_trip)
     db.session.commit()
 
-    # Cancel the scheduled check
-    cancel_trip_check(trip.id)
+    schedule_trip_check(current_app._get_current_object(), new_trip.id, expected_end_time)
 
-    return jsonify({'message': 'Trip completed', 'status': trip.status, 'open_gate': True}), 200
+    return jsonify({
+        'message': 'Started timer "Hostel -> Library"',
+        'trip_id': new_trip.id,
+        'expected_end_time': expected_end_time.isoformat(),
+        'open_gate': True
+    }), 201
 
 @api.route('/active_timers', methods=['GET'])
 def active_timers():

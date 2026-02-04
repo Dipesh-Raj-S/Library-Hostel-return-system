@@ -12,7 +12,7 @@ if "cap" not in st.session_state:
 
 # Configuration
 API_BASE_URL = "http://localhost:5000"
-REFRESH_RATE = 5 # Seconds
+REFRESH_RATE = 1 # Seconds
 
 st.set_page_config(
     page_title="Warden Dashboard",
@@ -36,7 +36,7 @@ def fetch_data(endpoint):
         return []
 
 if page == "Active Timers":
-    st.header("⏳ Active Library Trips")
+    st.header("⏳ Active Movements")
     
     placeholder = st.empty()
 
@@ -47,39 +47,55 @@ if page == "Active Timers":
             if data:
                 # Convert to DataFrame
                 df = pd.DataFrame(data)
-                    
+                
                 # Calculate remaining time
                 now = datetime.now()
-                df['expected_end_time_dt'] = pd.to_datetime(df['expected_end_time'])
+                if 'expected_end_time' in df.columns:
+                    df['expected_end_time_dt'] = pd.to_datetime(df['expected_end_time'])
                     
-                def calculate_remaining(row):
-                    remaining = row['expected_end_time_dt'] - now
-                    if remaining.total_seconds() > 0:
-                        mm, ss = divmod(remaining.seconds, 60)
-                        return f"{int(mm):02d}:{int(ss):02d}"
+                    def calculate_remaining(row):
+                        remaining = row['expected_end_time_dt'] - now
+                        if remaining.total_seconds() > 0:
+                            mm, ss = divmod(remaining.seconds, 60)
+                            return f"{int(mm):02d}:{int(ss):02d}"
+                        else:
+                            return "Passed"
+                    
+                    df['Time Remaining'] = df.apply(calculate_remaining, axis=1)
+
+                # Filter datasets
+                hl_movers = df[df['direction'] == 'Hostel -> Library'].copy() if 'direction' in df.columns else pd.DataFrame()
+                lh_movers = df[df['direction'] == 'Library -> Hostel'].copy() if 'direction' in df.columns else pd.DataFrame()
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.subheader("Hostel ➡️ Library")
+                    if not hl_movers.empty:
+                        display_df = hl_movers[['student_name', 'student_block', 'start_time', 'expected_end_time', 'Time Remaining', 'status']]
+                        display_df.columns = ['Name', 'Block', 'Start', 'Expected', 'Timer', 'Status']
+                        st.dataframe(
+                            display_df, 
+                            use_container_width=True,
+                            hide_index=True
+                        )
                     else:
-                        return "Passed"
-                    
-                df['Time Remaining'] = df.apply(calculate_remaining, axis=1)
-                    
-                # Select and rename columns for display
-                display_df = df[['student_name', 'student_block', 'start_time', 'expected_end_time', 'Time Remaining', 'status']]
-                display_df.columns = ['Student Name', 'Block', 'Start Time', 'Expected Return', 'Time Remaining', 'Status']
-                    
-                # Show as a table
-                st.dataframe(
-                    display_df, 
-                    use_container_width=True,
-                    column_config={
-                        "Student Name": st.column_config.TextColumn("Student Name", width="medium"),
-                        "Block": st.column_config.TextColumn("Block", width="small"),
-                        "Time Remaining": st.column_config.TextColumn("Timer", width="small"),
-                        "Status": st.column_config.TextColumn("Status", width="small"),
-                    },
-                    hide_index=True
-                )
+                        st.info("No active movements.")
+
+                with col2:
+                    st.subheader("Library ➡️ Hostel")
+                    if not lh_movers.empty:
+                        display_df = lh_movers[['student_name', 'student_block', 'start_time', 'expected_end_time', 'Time Remaining', 'status']]
+                        display_df.columns = ['Name', 'Block', 'Start', 'Expected', 'Timer', 'Status']
+                        st.dataframe(
+                            display_df, 
+                            use_container_width=True,
+                            hide_index=True
+                        )
+                    else:
+                        st.info("No active movements.")
             else:
-                st.info("No students currently outside.")
+                st.info("No students currently moving.")
     
         time.sleep(REFRESH_RATE)
         
