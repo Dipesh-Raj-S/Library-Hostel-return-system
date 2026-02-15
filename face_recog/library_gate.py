@@ -1,7 +1,7 @@
 import cv2
 import time
 import requests
-from utils import fetch_known_encodings, recognize_face, draw_boxes
+from face_recog.utils import fetch_known_encodings, recognize_face, draw_boxes
 from face_recognition import face_locations
 
 # Configuration

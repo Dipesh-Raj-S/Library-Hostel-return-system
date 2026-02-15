@@ -1,5 +1,5 @@
 import cv2
-from utils import get_face_encoding, register_student_api
+from face_recog.utils import get_face_encoding, register_student_api
 from face_recognition import face_locations
 
 DEFAULT_BLOCK = 'D'

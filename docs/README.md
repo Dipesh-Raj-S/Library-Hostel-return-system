@@ -4,12 +4,12 @@ A complete end-to-end system for tracking student return times from the library 
 
 ## Project Structure
 - `backend/`: Flask server (API, Database, Scheduler).
-- `face_recognition/`: Python scripts for Client Laptops (Library & Hostel).
+- `face_recog/`: Python scripts for Client Laptops (Library & Hostel).
 - `dashboard/`: Streamlit dashboard for the Warden.
 - `arduino/`: Arduino sketch for Gate Control.
 
 ## Prerequisites
-- Python 3.9+
+- Python 3.10
 - Arduino IDE (to upload sketch)
 - Webcam (for testing)
 - Arduino UNO + Relay (optional, for hardware demo)
@@ -25,7 +25,7 @@ A complete end-to-end system for tracking student return times from the library 
    pip install -r backend/requirements.txt
    
    # Face Recognition
-   pip install -r face_recognition/requirements.txt
+   pip install -r face_recog/requirements.txt
    
    # Dashboard
    pip install -r dashboard/requirements.txt
@@ -50,16 +50,14 @@ python app.py
 ### Step 2: Start the Warden Dashboard
 Open a new terminal:
 ```bash
-cd dashboard
-streamlit run app.py
+python -m streamlit run dashboard/app.py
 ```
 *Dashboard opens in your browser.*
 
 ### Step 3: Register a Student
 Open a new terminal:
 ```bash
-cd face_recognition
-python register_face.py
+python -m face_recog.register_face
 ```
 - Enter name.
 - Look at the camera and press 's' to save.
@@ -67,16 +65,14 @@ python register_face.py
 ### Step 4: Run Library Gate (Laptop A)
 Open a new terminal:
 ```bash
-cd face_recognition
-python library_gate.py
+python -m face_recog.library_gate
 ```
 - When it recognizes you, it starts the timer.
 
 ### Step 5: Run Hostel Gate (Laptop B)
 Open a new terminal:
 ```bash
-cd face_recognition
-python hostel_gate.py
+python -m face_recog.hostel_gate
 ```
 - Ensure Arduino is connected (update COM port in `hostel_gate.py` if needed).
 - When it recognizes you, it stops the timer and opens the gate.
