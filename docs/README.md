@@ -37,6 +37,10 @@ A complete end-to-end system for tracking student return times from the library 
    - Select your Board and Port.
    - Upload.
 
+4. **Create `.env` for configuration:**
+   - Create file `.env` and copy the contents of `.env.example` into it
+   - Update as necessary
+
 ## How to Run
 
 ### Step 1: Start the Backend Server
