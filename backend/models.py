@@ -24,7 +24,7 @@ class Trip(db.Model):
     start_time = db.Column(db.DateTime, default=datetime.now)
     expected_end_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(20), default='active') # active, completed, late
+    status = db.Column(db.String(20), default='active', index=True)  # active, completed, late
     
     # New fields for bi-directional tracking
     direction = db.Column(db.String(50), nullable=False) # "Hostel -> Library" or "Library -> Hostel"
@@ -32,7 +32,7 @@ class Trip(db.Model):
     end_location = db.Column(db.String(50), nullable=False) # "Library" or "Hostel"
     exceeded_limit = db.Column(db.Boolean, default=False)
     
-    is_alert = db.Column(db.Boolean, default=False)
+    is_alert = db.Column(db.Boolean, default=False, index=True)
 
     student = db.relationship('Student', backref=db.backref('trips', lazy=True))
 
