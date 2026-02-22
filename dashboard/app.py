@@ -61,16 +61,14 @@ def show_active_timers_fragment():
     with col1:
         st.subheader("Hostel ➡️ Library")
         if not hl_movers.empty:
-            st.dataframe(hl_movers[cols_to_show].rename(columns=dict(zip(cols_to_show, col_names))), 
-                         use_container_width=True, hide_index=True)
+            st.dataframe(hl_movers[cols_to_show].rename(columns=dict(zip(cols_to_show, col_names))), width='content', hide_index=True)
         else:
             st.info("No movements.")
 
     with col2:
         st.subheader("Library ➡️ Hostel")
         if not lh_movers.empty:
-            st.dataframe(lh_movers[cols_to_show].rename(columns=dict(zip(cols_to_show, col_names))), 
-                         use_container_width=True, hide_index=True)
+            st.dataframe(lh_movers[cols_to_show].rename(columns=dict(zip(cols_to_show, col_names))),width='content', hide_index=True)
         else:
             st.info("No movements.")
 
