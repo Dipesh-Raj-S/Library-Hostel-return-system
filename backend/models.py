@@ -8,6 +8,7 @@ class Student(db.Model):
     # Storing face encoding as a JSON string (list of floats)
     face_encoding = db.Column(db.Text, nullable=False)
     block = db.Column(db.String(10), nullable=False) # A, B, C, D1, D2
+    regno = db.Column(db.String(50),nullable=False,unique=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     def to_dict(self):
@@ -15,6 +16,7 @@ class Student(db.Model):
             'id': self.id,
             'name': self.name,
             'block': self.block,
+            'reg_no':self.regno,
             'created_at': self.created_at.isoformat()
         }
 
@@ -41,6 +43,7 @@ class Trip(db.Model):
             'id': self.id,
             'student_id': self.student_id,
             'student_name': self.student.name,
+            'reg_no':self.student.regno,
             'student_block': self.student.block,
             'start_time': self.start_time.isoformat(),
             'expected_end_time': self.expected_end_time.isoformat(),

@@ -8,16 +8,18 @@ def register_face():
     print("Student Registration")
     name = input("Enter student name: ")
     block = input("Enter block: ")
+    regno = input("Enter registration number: ")
     
     if not block:
         block = DEFAULT_BLOCK
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
     
     if not cap.isOpened():
         print("Error: Could not open webcam.")
         return
 
+    cap.set(cv2.CAP_PROP_BUFFERSIZE,1)
     print("Press 's' to capture face, 'q' to quit.")
     cv2.namedWindow("Register Face")
 
@@ -55,8 +57,8 @@ def register_face():
         key = cv2.waitKey(1) & 0xFF
 
         # exit if X is clicked
-        if cv2.getWindowProperty("Register Face", cv2.WND_PROP_VISIBLE) < 1: 
-            break 
+        #if cv2.getWindowProperty("Register Face", cv2.WND_PROP_VISIBLE) < 1: 
+        #   break 
 
         if key == ord('s'):
             print("Capturing...")
@@ -64,7 +66,7 @@ def register_face():
             
             if encoding is not None:
                 print(f"Face encoded for {name}. Sending to server...")
-                res, status = register_student_api(name, encoding, block)
+                res, status = register_student_api(name, encoding, block,regno)
                 
                 if status == 201:
                     print(f"Success! Student ID: {res.get('student_id')}")

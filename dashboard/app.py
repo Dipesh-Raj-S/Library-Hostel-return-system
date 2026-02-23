@@ -83,9 +83,22 @@ def show_alerts_fragment():
     else:
         st.success("No alerts. All students on time.")
 
+def student_reg_df():
+    res = requests.get("http://127.0.0.1:5000/get_encodings")
+    data = res.json()
+    rows = []
+    for sid, info in data.items():
+        rows.append([
+            info["name"],
+            info["block"],
+            info["reg_no"]
+        ])
+    df = pd.DataFrame(rows,columns=["Name","Block","Reg No"])
+    st.dataframe(df, use_container_width=True,hide_index=True)
+
 # Main UI
 st.title("Hostel Warden Dashboard")
-page = st.sidebar.selectbox("Navigation", ["Active Timers", "Alerts", "Student Logs"])
+page = st.sidebar.selectbox("Navigation", ["Active Timers", "Alerts", "Student Logs","Registered Students"])
 
 if page == "Active Timers":
     st.header("Active Movements")
@@ -98,3 +111,8 @@ elif page == "Alerts":
 elif page == "Student Logs":
     st.header("📜 All Student Logs")
     st.info("Log history feature coming soon.")
+
+elif page == "Registered Students":
+    st.header("Registered Students")
+    student_reg_df()
+    

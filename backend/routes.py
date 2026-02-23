@@ -22,19 +22,21 @@ def register_student():
     name = data.get('name')
     face_encoding = data.get('face_encoding') # List of floats
     block = data.get('block')
+    regno = data.get('reg_no')
 
-    if not name or not face_encoding or not block:
-        return jsonify({'error': 'Missing name, face_encoding, or block'}), 400
+    if not name or not face_encoding or not block or not regno:
+        return jsonify({'error': 'Missing Fields'}), 400
 
     # Check if student already exists (optional, by name for now)
-    existing = Student.query.filter_by(name=name).first()
+    existing = Student.query.filter_by(regno=regno).first()
     if existing:
         return jsonify({'error': 'Student already exists'}), 400
 
     new_student = Student(
         name=name,
         face_encoding=json.dumps(face_encoding),
-        block=block
+        block=block,
+        regno=regno
     )
     db.session.add(new_student)
     db.session.commit()
@@ -49,6 +51,7 @@ def get_encodings():
         encodings[student.id] = {
             'name': student.name,
             'block': student.block,
+            'reg_no':student.regno,
             'encoding': json.loads(student.face_encoding)
         }
     return jsonify(encodings), 200
