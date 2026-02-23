@@ -25,7 +25,7 @@ def get_face_encoding(frame):
     encodings = face_recognition.face_encodings(rgb, boxes)
     return encodings[0]
 
-def register_student_api(name, encoding, block):
+def register_student_api(name, encoding, block,regno):
     """
     Sends registration data to the backend.
     """
@@ -33,7 +33,8 @@ def register_student_api(name, encoding, block):
     payload = {
         "name": name,
         "face_encoding": encoding.tolist(),
-        "block": block
+        "block": block,
+        "reg_no":regno.strip()
     }
 
     try:
