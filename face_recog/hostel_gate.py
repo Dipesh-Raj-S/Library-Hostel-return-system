@@ -4,8 +4,6 @@ import requests
 import sys
 import os
 
-# Add arduino directory to path to import serial_comms
-from arduino.serial_comms import GateController
 from face_recog.utils import fetch_known_encodings, recognize_face, draw_boxes
 from face_recognition import face_locations
 
@@ -17,12 +15,6 @@ ARDUINO_PORT = Config.ARDUINO_PORT
 
 def hostel_gate_loop():
     print("Initializing Hostel Gate System...")
-
-    # Initialize Arduino Connection
-    gate = GateController(port=ARDUINO_PORT)
-    if not gate.connect():
-        print("WARNING: Arduino not connected. Gate will not physically open.")
-        gate = None  # Set to None if connection fails
     
     # Fetch known faces
     print("Fetching known student encodings...")
@@ -71,8 +63,6 @@ def hostel_gate_loop():
                     if response.status_code == 200 or response.status_code == 201:
                         data = response.json()
                         print(f"Server: {data.get('message')}")
-                        if data.get('open_gate') and gate:
-                            gate.open_hostel_gate()
                     else:
                         print(f"Entry Error: {response.text}")
 
@@ -90,8 +80,6 @@ def hostel_gate_loop():
             break
 
     cap.release()
-    if gate:
-        gate.close()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":

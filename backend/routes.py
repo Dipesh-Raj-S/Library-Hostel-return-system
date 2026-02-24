@@ -3,6 +3,7 @@ from models import Student, Trip, db
 from scheduler import schedule_trip_check, cancel_trip_check
 from datetime import datetime, timedelta
 import json
+from arduino_service import open_hostel_gate, open_library_gate
 
 api = Blueprint('api', __name__)
 
@@ -80,6 +81,8 @@ def process_scan(student_id, current_location):
             db.session.commit()
             cancel_trip_check(active_trip.id)
             
+            open_library_gate()
+            
             return jsonify({
                 'message': f'Journey to {current_location} completed.',
                 'status': active_trip.status,
@@ -109,6 +112,8 @@ def process_scan(student_id, current_location):
 
     # Schedule the background alert
     schedule_trip_check(current_app._get_current_object(), new_trip.id, expected_end_time)
+    
+    open_library_gate()
 
     return jsonify({
         'message': f'Started timer: {direction_label}',

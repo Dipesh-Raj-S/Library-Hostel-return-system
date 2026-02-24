@@ -1,11 +1,8 @@
 import serial
 import time
 
-from config import Config
-ARDUINO_PORT = Config.ARDUINO_PORT
-
 class GateController:
-    def __init__(self, port=ARDUINO_PORT, baud_rate=9600):
+    def __init__(self, port='COM4', baud_rate=9600):
         """
         Initialize Gate Controller for dual servo system
         

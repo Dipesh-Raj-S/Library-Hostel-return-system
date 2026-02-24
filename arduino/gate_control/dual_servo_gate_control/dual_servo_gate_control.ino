@@ -1,12 +1,12 @@
 /*
-  Dual Servo Gate Control System
+  Dual Servo Gate Control System - Non-Blocking Version
   Controls two servo motors for Hostel and Library gates
   
   Hardware Connections:
   - Hostel Gate Servo Signal -> Pin 9
   - Library Gate Servo Signal -> Pin 10
   - Both Servos GND -> Arduino GND
-  - Both Servos VCC -> 5V (external power recommended)
+  - Both Servos VCC -> EXTERNAL 5V-6V (Do not use Arduino 5V pin for multiple servos!)
   
   Serial Commands:
   - "OPEN_HOSTEL" -> Opens hostel gate for 10 seconds
@@ -27,8 +27,15 @@ Servo libraryGate;
 const int GATE_CLOSED = 0;
 const int GATE_OPEN = 90;
 
-// Timing
-const unsigned long GATE_OPEN_DURATION = 10000; // 10 seconds in milliseconds
+// Timing Constants
+const unsigned long GATE_OPEN_DURATION = 1000; // 10 seconds
+
+// State Variables
+bool hostelGateActive = false;
+unsigned long hostelGateStartTime = 0;
+
+bool libraryGateActive = false;
+unsigned long libraryGateStartTime = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -41,23 +48,46 @@ void setup() {
   hostelGate.write(GATE_CLOSED);
   libraryGate.write(GATE_CLOSED);
   
-  Serial.println("Dual Servo Gate Control System Ready");
+  Serial.println("Dual Servo Gate Control System Ready (Non-Blocking)");
   Serial.println("Commands: OPEN_HOSTEL, OPEN_LIBRARY");
 }
 
 void loop() {
+  // 1. Handle Serial Commands
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
-    command.trim(); // Remove whitespace and newline characters
+    command.trim();
     
     if (command == "OPEN_HOSTEL") {
-      openHostelGate();
+      if (!hostelGateActive) {
+        openHostelGate();
+      } else {
+        Serial.println("Hostel gate is already in operation");
+      }
     } 
     else if (command == "OPEN_LIBRARY") {
-      openLibraryGate();
+      if (!libraryGateActive) {
+        openLibraryGate();
+      } else {
+        Serial.println("Library gate is already in operation");
+      }
     }
     else {
       Serial.println("Unknown command: " + command);
+    }
+  }
+
+  // 2. Manage Hostel Gate Timing
+  if (hostelGateActive) {
+    if (millis() - hostelGateStartTime >= GATE_OPEN_DURATION) {
+      closeHostelGate();
+    }
+  }
+
+  // 3. Manage Library Gate Timing
+  if (libraryGateActive) {
+    if (millis() - libraryGateStartTime >= GATE_OPEN_DURATION) {
+      closeLibraryGate();
     }
   }
 }
@@ -65,17 +95,27 @@ void loop() {
 void openHostelGate() {
   Serial.println("Opening Hostel Gate...");
   hostelGate.write(GATE_OPEN);
-  Serial.println("Hostel Gate OPEN");
+  hostelGateActive = true;
   delay(GATE_OPEN_DURATION);
+}
+
+void closeHostelGate() {
   hostelGate.write(GATE_CLOSED);
+  hostelGateActive = false;
   Serial.println("Hostel Gate CLOSED");
+  delay(GATE_OPEN_DURATION);
 }
 
 void openLibraryGate() {
   Serial.println("Opening Library Gate...");
   libraryGate.write(GATE_OPEN);
-  Serial.println("Library Gate OPEN");
+  libraryGateActive = true;
   delay(GATE_OPEN_DURATION);
+}
+
+void closeLibraryGate() {
   libraryGate.write(GATE_CLOSED);
+  libraryGateActive = false;
+  delay(GATE_OPEN_DURATION);
   Serial.println("Library Gate CLOSED");
 }

@@ -4,7 +4,6 @@ import requests
 import sys
 import os
 
-from arduino.serial_comms import GateController
 from face_recog.utils import fetch_known_encodings, recognize_face, draw_boxes
 from face_recognition import face_locations
 
@@ -16,12 +15,7 @@ ARDUINO_PORT = Config.ARDUINO_PORT
 def library_gate_loop():
     print("Initializing library gate system...")
     
-    # Initialize Arduino Connection
-    gate = GateController(port=ARDUINO_PORT)
-    if not gate.connect():
-        print("WARNING: Arduino not connected. Gate will not physically open.")
-        gate = None  # Set to None if connection fails
-    
+
     # Fetch known faces
     print("Fetching known student encodings...")
     known_ids, known_encodings, known_names = fetch_known_encodings()
@@ -68,8 +62,6 @@ def library_gate_loop():
                     if res.status_code == 200 or res.status_code == 201:
                         data = res.json()
                         print(f"Server: {data.get('message')}")
-                        if data.get('open_gate') and gate:
-                            gate.open_library_gate()
                     else:
                         print(f"Server error: {res.text}")
 
@@ -87,8 +79,6 @@ def library_gate_loop():
             break
 
     cap.release()
-    if gate:
-        gate.close()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
