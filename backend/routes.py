@@ -81,7 +81,10 @@ def process_scan(student_id, current_location):
             db.session.commit()
             cancel_trip_check(active_trip.id)
             
-            open_library_gate()
+            if current_location == "Hostel":
+                open_hostel_gate()
+            else:
+                open_library_gate()
             
             return jsonify({
                 'message': f'Journey to {current_location} completed.',
@@ -113,7 +116,10 @@ def process_scan(student_id, current_location):
     # Schedule the background alert
     schedule_trip_check(current_app._get_current_object(), new_trip.id, expected_end_time)
     
-    open_library_gate()
+    if current_location == "Hostel":
+        open_hostel_gate()
+    else:
+        open_library_gate()
 
     return jsonify({
         'message': f'Started timer: {direction_label}',
