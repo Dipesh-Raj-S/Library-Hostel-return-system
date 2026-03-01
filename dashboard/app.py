@@ -37,13 +37,20 @@ def process_timer_data(data):
     now = datetime.now()
     
     if 'expected_end_time' in df.columns:
+        # Convert to datetime objects
         df['expected_dt'] = pd.to_datetime(df['expected_end_time'])
-        diff = (df['expected_dt'] - now).dt.total_seconds()
+        df['start_dt'] = pd.to_datetime(df['start_time'])
         
-        # Vectorized string formatting: MM:SS or "Passed"
+        # Calculate remaining time (vectorized)
+        diff = (df['expected_dt'] - now).dt.total_seconds()
         df['Time Remaining'] = diff.apply(
             lambda x: f"{int(x//60):02d}:{int(x%60):02d}" if x > 0 else "🚨 Passed"
         )
+
+        # format for readability
+        df['display_start'] = df['start_dt'].dt.strftime("%I:%M %p")
+        df['display_expected'] = df['expected_dt'].dt.strftime("%I:%M %p")
+        
     return df
 
 
@@ -66,25 +73,47 @@ def render_active_timers():
         with col:
             st.subheader(f"➡️ {direction}")
             subset = df[df['direction'] == direction]
+
             if subset.empty:
                 st.caption("No movements in this direction.")
             else:
                 for _, row in subset.iterrows():
-                    # Color indicator for late students
-                    label = f"{row['student_name']} | {row['Time Remaining']}"
-                    with st.expander(label):
-                        c1, c2 = st.columns(2)
-                        c1.markdown(f"**Start:** {row['start_time']}")
-                        c1.markdown(f"**Expected:** {row['expected_end_time']}")
-                        c2.markdown(f"**Status:** {row['status']}")
-                        c2.markdown(f"**Block:** {row['student_block']}")
+                    label = f"{row['student_name']} (Block {row['student_block']}) — {row['Time Remaining']}"
+                    expanded = st.toggle(label, key=f"tog_{row['id']}")
+
+                    if expanded:
+                        with st.container(border=True):
+                            m1, m2, m3 = st.columns(3)
+                            m1.metric("Departed", row['display_start'])
+                            m2.metric("Expected", row['display_expected'])
+                            
+                            # Color code the remaining time
+                            is_late = "Passed" in row['Time Remaining']
+                            m3.metric("Remaining", row['Time Remaining'], 
+                                    delta="LATE" if is_late else None,
+                                    delta_color="inverse")
+                            
+                            st.caption(f"Status: {row['status']} | Direction: {row['direction']}")
+                    
+                    st.write("")
+
 
 @st.fragment(run_every=REFRESH_RATE)
 def render_alerts():
     data = fetch_api_data("alerts")
     if data:
+        df = pd.DataFrame(data)
+        
+        # Beautify the expected time
+        df['expected_dt'] = pd.to_datetime(df['expected_end_time'])
+        df['Expected Arrival'] = df['expected_dt'].dt.strftime("%b %d, %I:%M %p")
+
         st.error(f"Total Late Students: {len(data)}")
-        st.dataframe(pd.DataFrame(data)[['student_name', 'expected_end_time', 'status']], width='stretch', hide_index=True)
+        st.dataframe(df[['student_name', 'Expected Arrival', 'status']], width='stretch', hide_index=True,
+            column_config={
+                "student_name": "Student Name",
+                "status": "Current Status"
+            })
     else:
         st.success("✅ All students on time.")
 
