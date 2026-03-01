@@ -3,7 +3,7 @@ from dashboard.modules import alerts, logs, registration, timers
 
 st.set_page_config(
     page_title="Warden Dashboard",
-    page_icon="👮",
+    page_icon=":material/admin_panel_settings:",
     layout="wide"
 )
 

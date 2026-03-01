@@ -33,13 +33,13 @@ def render_registration_table():
             # Show confirm/cancel buttons instead of the delete icon
             with cols[3]:
                 sub_c1, sub_c2 = st.columns(2)
-                if sub_c1.button("✅", key=f"conf_{reg_no}", help="Confirm Delete"):
+                if sub_c1.button(":material/check_circle:", key=f"conf_{reg_no}", help="Confirm Delete"):
                     del_student_api(reg_no)
-                if sub_c2.button("❌", key=f"canc_{reg_no}", help="Cancel"):
+                if sub_c2.button(":material/cancel:", key=f"canc_{reg_no}", help="Cancel"):
                     st.session_state.confirm_delete_id = None
                     st.rerun()
         else:
             # Show the delete icon
-            if cols[3].button("🗑️", key=f"del_{reg_no}"):
+            if cols[3].button(":material/delete:", key=f"del_{reg_no}"):
                 st.session_state.confirm_delete_id = reg_no
                 st.rerun()
