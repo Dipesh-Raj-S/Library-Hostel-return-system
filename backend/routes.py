@@ -143,6 +143,12 @@ def process_scan(student_id, current_location):
         'open_gate': True
     }), 201
 
+@api.route('/trip_logs', methods=['GET'])
+def trip_logs():
+    # Fetch trips that are NOT active, ordered by most recent first
+    logs = Trip.query.filter(Trip.status != 'active').order_by(Trip.start_time.desc()).limit(100).all()
+    return jsonify([t.to_dict() for t in logs]), 200
+
 @api.route('/scan_library', methods=['POST'])
 def scan_library():
     return process_scan(request.json.get('student_id'), "Library")
