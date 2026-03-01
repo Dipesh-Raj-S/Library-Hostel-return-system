@@ -17,6 +17,13 @@ DEFAULT_LIMIT = 10
 def home():
     return render_template('index.html')
 
+@api.route('/check-student/<regno>', methods=['GET'])
+def check_student(regno):
+    student = Student.query.filter_by(regno=regno).first()
+    if student:
+        return {"message": "Exists"}, 200
+    return {"message": "Available"}, 404
+
 @api.route('/register_student', methods=['POST'])
 def register_student():
     data = request.json
@@ -28,10 +35,10 @@ def register_student():
     if not name or not face_encoding or not block or not regno:
         return jsonify({'error': 'Missing Fields'}), 400
 
-    # Check if student already exists (optional, by name for now)
+    # Check if student already exists 
     existing = Student.query.filter_by(regno=regno).first()
     if existing:
-        return jsonify({'error': 'Student already exists'}), 400
+        return jsonify({'error': 'Student with regno already exists'}), 400
 
     new_student = Student(
         name=name,
@@ -43,6 +50,15 @@ def register_student():
     db.session.commit()
 
     return jsonify({'message': 'Student registered successfully', 'student_id': new_student.id}), 201
+
+@api.route('/delete-student/<regno>', methods=['DELETE'])
+def delete_student(regno):
+    student = Student.query.filter_by(regno=regno).first()
+    if student:
+        db.session.delete(student)
+        db.session.commit()
+        return {"message": "Deleted"}, 200
+    return {"message": "Not found"}, 404
 
 @api.route('/get_encodings', methods=['GET'])
 def get_encodings():

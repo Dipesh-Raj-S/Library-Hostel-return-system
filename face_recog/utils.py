@@ -25,6 +25,17 @@ def get_face_encoding(frame):
     encodings = face_recognition.face_encodings(rgb, boxes)
     return encodings[0]
 
+def check_reg_exists(regno):
+    """
+    Checks if regno is already in the database
+    """
+    try:
+        res = requests.get(f"{API_BASE_URL}/check-student/{regno}")
+        return res.status_code == 200  # Returns True if exists
+    except Exception as e:
+        print(f"Connection error: {e}")
+        return False
+
 def register_student_api(name, encoding, block,regno):
     """
     Sends registration data to the backend.
