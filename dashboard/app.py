@@ -16,7 +16,9 @@ st.set_page_config(
 )
 
 # Helper for API calls
-def fetch_data(endpoint):
+@st.cache_data(ttl=REFRESH_RATE)
+def fetch_api_data(endpoint):
+    # Cached API fetcher
     try:
         res = requests.get(f"{API_BASE_URL}/{endpoint}", timeout=2)
         if res.status_code == 200:
@@ -26,177 +28,127 @@ def fetch_data(endpoint):
         st.error(f"Backend Connection Error: {e}")
         return []
 
-# Auto Refreshing Timers ---
-@st.fragment(run_every=REFRESH_RATE)
-def get_active_data():
-    return fetch_data("active_timers")
-    '''if not data:
-        st.info("No students currently moving.")
-        return
-
+def process_timer_data(data):
+    """Vectorized calculation for time remaining"""
+    if not data: 
+        return pd.DataFrame()
+    
     df = pd.DataFrame(data)
     now = datetime.now()
     
     if 'expected_end_time' in df.columns:
-        df['expected_end_time_dt'] = pd.to_datetime(df['expected_end_time'])
+        df['expected_dt'] = pd.to_datetime(df['expected_end_time'])
+        diff = (df['expected_dt'] - now).dt.total_seconds()
         
-        def calculate_remaining(row):
-            remaining = row['expected_end_time_dt'] - now
-            if remaining.total_seconds() > 0:
-                mm, ss = divmod(int(remaining.total_seconds()), 60)
-                return f"{mm:02d}:{ss:02d}"
-            return "Passed"
-        
-        df['Time Remaining'] = df.apply(calculate_remaining, axis=1)
+        # Vectorized string formatting: MM:SS or "Passed"
+        df['Time Remaining'] = diff.apply(
+            lambda x: f"{int(x//60):02d}:{int(x%60):02d}" if x > 0 else "🚨 Passed"
+        )
+    return df
 
-    # Filter datasets
-    hl_movers = df[df['direction'] == 'Hostel -> Library'].copy() if 'direction' in df.columns else pd.DataFrame()
-    lh_movers = df[df['direction'] == 'Library -> Hostel'].copy() if 'direction' in df.columns else pd.DataFrame()
+
+@st.fragment(run_every=REFRESH_RATE)
+def render_active_timers():
+    data = fetch_api_data("active_timers")
+    df = process_timer_data(data)
+
+    if df.empty:
+        st.info("No students currently moving.")
+        return
 
     col1, col2 = st.columns(2)
-    
-    cols_to_show = ['student_name', 'student_block', 'start_time', 'expected_end_time', 'Time Remaining', 'status']
-    col_names = ['Name', 'Block', 'Start', 'Expected', 'Timer', 'Status']
+    directions = {
+        "Hostel -> Library": col1,
+        "Library -> Hostel": col2
+    }
 
-    with col1:
-        st.subheader("Hostel ➡️ Library")
-        if not hl_movers.empty:
-            #st.dataframe(hl_movers[cols_to_show].rename(columns=dict(zip(cols_to_show, col_names))), width='content', hide_index=True)
-            if not hl_movers.empty:
-                for _, row in hl_movers.iterrows():
-
-                    title = f"{row['student_name']} | Block {row['student_block']} | {row['Time Remaining']}"
-
-                    with st.expander(title):
+    for direction, col in directions.items():
+        with col:
+            st.subheader(f"➡️ {direction}")
+            subset = df[df['direction'] == direction]
+            if subset.empty:
+                st.caption("No movements in this direction.")
+            else:
+                for _, row in subset.iterrows():
+                    # Color indicator for late students
+                    label = f"{row['student_name']} | {row['Time Remaining']}"
+                    with st.expander(label):
                         c1, c2 = st.columns(2)
+                        c1.markdown(f"**Start:** {row['start_time']}")
+                        c1.markdown(f"**Expected:** {row['expected_end_time']}")
+                        c2.markdown(f"**Status:** {row['status']}")
+                        c2.markdown(f"**Block:** {row['student_block']}")
 
-                        c1.write("Start:", row['start_time'])
-                        c1.write("Expected:", row['expected_end_time'])
-
-                        c2.write("Status:", row['status'])
-                        c2.write("Direction:", row['direction'])
-        else:
-            st.info("No movements.")
-
-    with col2:
-        st.subheader("Library ➡️ Hostel")
-        if not lh_movers.empty:
-            #st.dataframe(lh_movers[cols_to_show].rename(columns=dict(zip(cols_to_show, col_names))),width='content', hide_index=True)
-             if not lh_movers.empty:
-                for _, row in lh_movers.iterrows():
-
-                    title = f"{row['student_name']} | Block {row['student_block']} | {row['Time Remaining']}"
-
-                    with st.expander(title):
-                        c1, c2 = st.columns(2)
-
-                        c1.write("Start:", row['start_time'])
-                        c1.write("Expected:", row['expected_end_time'])
-
-                        c2.write("Status:", row['status'])
-                        c2.write("Direction:", row['direction'])
-        else:
-            st.info("No movements.")'''
-
-# Auto Refreshing Alerts
 @st.fragment(run_every=REFRESH_RATE)
-def show_alerts_fragment():
-    data = fetch_data("alerts")
+def render_alerts():
+    data = fetch_api_data("alerts")
     if data:
-        df = pd.DataFrame(data)
         st.error(f"Total Late Students: {len(data)}")
-        st.dataframe(df[['student_name', 'expected_end_time', 'status']], use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(data)[['student_name', 'expected_end_time', 'status']], width='stretch', hide_index=True)
     else:
-        st.success("No alerts. All students on time.")
+        st.success("✅ All students on time.")
 
-def student_reg_df():
-    res = requests.get("http://127.0.0.1:5000/get_encodings")
-    data = res.json()
+def del_student(regno):
+    """Helper to call the delete API"""
+    try:
+        res = requests.delete(f"{API_BASE_URL}/delete-student/{regno}", timeout=3)
+        if res.status_code == 200:
+            st.success(f"Student {regno} deleted successfully!")
+            st.rerun() # Refresh the UI
+        else:
+            st.error("Failed to delete student.")
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+@st.fragment(run_every=30) 
+def render_registration_table():
+    data = fetch_api_data("get_encodings")
+    if not data:
+        st.info("No students registered.")
+        return
+
+    # Convert to list for easier iteration
     rows = []
     for sid, info in data.items():
-        rows.append([
-            info["name"],
-            info["block"],
-            info["reg_no"]
-        ])
-    df = pd.DataFrame(rows,columns=["Name","Block","Reg No"])
-    st.dataframe(df, use_container_width=True,hide_index=True)
+        rows.append({
+            "Name": info["name"],
+            "Block": info["block"],
+            "Reg No": info["reg_no"]
+        })
+    
+    # Header Row
+    cols = st.columns([3, 2, 2, 1])
+    cols[0].write("**Name**")
+    cols[1].write("**Block**")
+    cols[2].write("**Reg No**")
+    cols[3].write("**Action**")
+    st.divider()
 
-# Main UI
-st.title("Hostel Warden Dashboard")
-page = st.sidebar.selectbox("Navigation", ["Active Timers", "Alerts", "Student Logs","Registered Students"])
+    # Data Rows
+    for row in rows:
+        cols = st.columns([3, 2, 2, 1])
+        cols[0].write(row["Name"])
+        cols[1].write(row["Block"])
+        cols[2].write(row["Reg No"])
+        
+        # Unique key for each button using Reg No
+        if cols[3].button("🗑️", key=f"del_{row['Reg No']}"):
+            del_student(row["Reg No"])
+
+# --- Main Navigation ---
+st.title("🛡️ Hostel Warden Dashboard")
+page = st.sidebar.radio("Navigation", ["Active Timers", "Alerts", "Student Logs", "Registered Students"])
 
 if page == "Active Timers":
-    st.header("Active Movements")
-    data = get_active_data()
-
-    if not data:
-        st.info("No students currently moving.")
-
-    else:
-        df = pd.DataFrame(data)
-        now = datetime.now()
-
-        if 'expected_end_time' in df.columns:
-            df['expected_end_time_dt'] = pd.to_datetime(df['expected_end_time'])
-
-            def calculate_remaining(row):
-                remaining = row['expected_end_time_dt'] - now
-                if remaining.total_seconds() > 0:
-                    mm, ss = divmod(int(remaining.total_seconds()), 60)
-                    return f"{mm:02d}:{ss:02d}"
-                return "Passed"
-
-            df['Time Remaining'] = df.apply(calculate_remaining, axis=1)
-
-        hl_movers = df[df['direction']=='Hostel -> Library']
-        lh_movers = df[df['direction']=='Library -> Hostel']
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("Hostel ➡️ Library")
-
-            for _, row in hl_movers.iterrows():
-
-                with st.expander(
-                    f"{row['student_name']} | Block {row['student_block']} | {row['Time Remaining']}"
-                ):
-
-                    c1, c2 = st.columns(2)
-
-                    c1.markdown(f"**Start:** {row['start_time']}")
-                    c1.markdown(f"**Expected:** {row['expected_end_time']}")
-
-                    c2.markdown(f"**Status:** {row['status']}")
-                    c2.markdown(f"**Direction:** {row['direction']}")
-
-        with col2:
-            st.subheader("Library ➡️ Hostel")
-
-            for _, row in lh_movers.iterrows():
-
-                with st.expander(
-                    f"{row['student_name']} | Block {row['student_block']} | {row['Time Remaining']}"
-                ):
-
-                    c1, c2 = st.columns(2)
-
-                    c1.markdown(f"**Start:** {row['start_time']}")
-                    c1.markdown(f"**Expected:** {row['expected_end_time']}")
-
-                    c2.markdown(f"**Status:** {row['status']}")
-                    c2.markdown(f"**Direction:** {row['direction']}")
+    render_active_timers()
 
 elif page == "Alerts":
-    st.header("🚨 Late Alerts")
-    show_alerts_fragment()
+    render_alerts()
 
 elif page == "Student Logs":
     st.header("📜 All Student Logs")
     st.info("Log history feature coming soon.")
 
 elif page == "Registered Students":
-    st.header("Registered Students")
-    student_reg_df()
-    
+    st.header("📋 Registered Students")
+    render_registration_table()
