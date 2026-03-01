@@ -122,10 +122,11 @@ def del_student(regno):
     try:
         res = requests.delete(f"{API_BASE_URL}/delete-student/{regno}", timeout=3)
         if res.status_code == 200:
-            st.success(f"Student {regno} deleted successfully!")
+            st.success(f"Student {regno} deleted.")
+            st.session_state.confirm_delete_id = None
             st.rerun() # Refresh the UI
         else:
-            st.error("Failed to delete student.")
+            st.error("Failed to delete.")
     except Exception as e:
         st.error(f"Error: {e}")
 
@@ -136,33 +137,41 @@ def render_registration_table():
         st.info("No students registered.")
         return
 
-    # Convert to list for easier iteration
-    rows = []
-    for sid, info in data.items():
-        rows.append({
-            "Name": info["name"],
-            "Block": info["block"],
-            "Reg No": info["reg_no"]
-        })
-    
+    # Initialize state to track which student is being deleted
+    if 'confirm_delete_id' not in st.session_state:
+        st.session_state.confirm_delete_id = None
+
     # Header Row
-    cols = st.columns([3, 2, 2, 1])
+    cols = st.columns([3, 2, 2, 2])
     cols[0].write("**Name**")
     cols[1].write("**Block**")
     cols[2].write("**Reg No**")
     cols[3].write("**Action**")
     st.divider()
 
-    # Data Rows
-    for row in rows:
-        cols = st.columns([3, 2, 2, 1])
-        cols[0].write(row["Name"])
-        cols[1].write(row["Block"])
-        cols[2].write(row["Reg No"])
+    for sid, info in data.items():
+        reg_no = info["reg_no"]
+        cols = st.columns([3, 2, 2, 2])
         
-        # Unique key for each button using Reg No
-        if cols[3].button("🗑️", key=f"del_{row['Reg No']}"):
-            del_student(row["Reg No"])
+        cols[0].write(info["name"])
+        cols[1].write(info["block"])
+        cols[2].write(reg_no)
+
+        # confirm delete
+        if st.session_state.confirm_delete_id == reg_no:
+            # Show confirm/cancel buttons instead of the delete icon
+            with cols[3]:
+                sub_c1, sub_c2 = st.columns(2)
+                if sub_c1.button("✅", key=f"conf_{reg_no}", help="Confirm Delete"):
+                    del_student(reg_no)
+                if sub_c2.button("❌", key=f"canc_{reg_no}", help="Cancel"):
+                    st.session_state.confirm_delete_id = None
+                    st.rerun()
+        else:
+            # Show the delete icon
+            if cols[3].button("🗑️", key=f"del_{reg_no}"):
+                st.session_state.confirm_delete_id = reg_no
+                st.rerun()
 
 @st.fragment(run_every=30) 
 def render_trip_logs():
