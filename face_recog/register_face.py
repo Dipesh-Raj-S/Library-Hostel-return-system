@@ -1,5 +1,5 @@
 import cv2
-from face_recog.utils import get_face_encoding, register_student_api
+from face_recog.utils import get_face_encoding, register_student_api, check_reg_exists
 from face_recognition import face_locations
 
 DEFAULT_BLOCK = 'D'
@@ -9,11 +9,15 @@ def register_face():
     name = input("Enter student name: ")
     block = input("Enter block: ")
     regno = input("Enter registration number: ")
+
+    if check_reg_exists(regno):
+        print("Student with that registration number already exists.")
+        return
     
     if not block:
         block = DEFAULT_BLOCK
 
-    cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(0)
     
     if not cap.isOpened():
         print("Error: Could not open webcam.")
@@ -57,8 +61,8 @@ def register_face():
         key = cv2.waitKey(1) & 0xFF
 
         # exit if X is clicked
-        #if cv2.getWindowProperty("Register Face", cv2.WND_PROP_VISIBLE) < 1: 
-        #   break 
+        if cv2.getWindowProperty("Register Face", cv2.WND_PROP_VISIBLE) < 1: 
+          break 
 
         if key == ord('s'):
             print("Capturing...")
@@ -71,7 +75,7 @@ def register_face():
                 if status == 201:
                     print(f"Success! Student ID: {res.get('student_id')}")
                     break
-                else:
+                else :
                     print(f"Registration failed: {res}")
             else:
                 print("Try again.")
