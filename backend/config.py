@@ -6,4 +6,4 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SCHEDULER_API_ENABLED = True
     NTFY_SRVR = os.getenv("NTFY_SRVR", "http://localhost")
-    NTFY_TOPIC = os.getenv("NTFY_TOPIC", "timer_alerts")
+    NTFY_TOPIC = os.getenv("NTFY_TOPIC", "alerts")

@@ -13,6 +13,35 @@ API_BASE_URL = Config.API_BASE_URL
 HOSTEL_ENTRY_ENDPOINT = Config.HOSTEL_ENTRY_ENDPOINT
 ARDUINO_PORT = Config.ARDUINO_PORT
 
+# optional local serial control (only used if Arduino is attached
+# directly to the machine running this script).  The backend also
+# contains its own serial controller, so this is not strictly
+# necessary unless you moved the board to the client laptop.
+try:
+    import serial
+except ImportError:
+    serial = None
+
+
+def trigger_local_arduino(cmd: str):
+    """Send a raw command to the Arduino plugged into ARDUINO_PORT."""
+    if serial is None:
+        print("pyserial not installed; cannot talk to local Arduino")
+        return
+    try:
+        ser = serial.Serial(ARDUINO_PORT, 9600, timeout=2)
+        # wait a moment for the board to reset
+        time.sleep(2)
+        ser.write(cmd.encode('utf-8') + b"\n")
+        ser.flush()
+        # read any responses
+        time.sleep(0.1)
+        while ser.in_waiting > 0:
+            print("Arduino(local):", ser.readline().decode('utf-8').strip())
+        ser.close()
+    except Exception as e:
+        print(f"Local Arduino serial error: {e}")
+
 def hostel_gate_loop():
     print("Initializing Hostel Gate System...")
     
@@ -58,13 +87,21 @@ def hostel_gate_loop():
                 print(f"Student {name} arrived at hostel...")
                 try:
                     payload = {"student_id": student_id}
-                    response = requests.post(HOSTEL_ENTRY_ENDPOINT, json=payload)
+                    response = requests.post(HOSTEL_ENTRY_ENDPOINT, json=payload, timeout=10)
                     
-                    if response.status_code == 200 or response.status_code == 201:
+                    if response.status_code in (200, 201):
                         data = response.json()
-                        print(f"Server: {data.get('message')}")
+                        print(f"Server: {data.get('message')}  open_gate={data.get('open_gate')}")
+                        # if the backend tells us to open the gate and the board
+                        # is connected locally, send the serial command here as
+                        # well (this duplicates the backend behaviour but is
+                        # handy when the board is hanging off the face laptop
+                        # instead of the server).
+                        if data.get('open_gate'):
+                            # command depends on which gate this script controls
+                            trigger_local_arduino("OPEN_HOSTEL")
                     else:
-                        print(f"Entry Error: {response.text}")
+                        print(f"Entry Error: {response.status_code} {response.text}")
 
                 except Exception as e:
                     print(f"Network error: {e}")

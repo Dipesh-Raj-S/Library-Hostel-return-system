@@ -12,6 +12,30 @@ API_BASE_URL = Config.API_BASE_URL
 LIBRARY_EXIT_ENDPOINT = Config.LIBRARY_EXIT_ENDPOINT
 ARDUINO_PORT = Config.ARDUINO_PORT
 
+# local serial helper – generally the library gate script doesn't
+# need this, the backend opens the hostel gate, but it doesn't hurt to
+# have the same debugging support available.
+try:
+    import serial
+except ImportError:
+    serial = None
+
+
+def trigger_local_arduino(cmd: str):
+    if serial is None:
+        return
+    try:
+        ser = serial.Serial(ARDUINO_PORT, 9600, timeout=2)
+        time.sleep(2)
+        ser.write(cmd.encode('utf-8') + b"\n")
+        ser.flush()
+        time.sleep(0.1)
+        while ser.in_waiting > 0:
+            print("Arduino(local):", ser.readline().decode('utf-8').strip())
+        ser.close()
+    except Exception as e:
+        print(f"Local Arduino serial error: {e}")
+
 def library_gate_loop():
     print("Initializing library gate system...")
     
@@ -59,11 +83,13 @@ def library_gate_loop():
                     payload = {"student_id": student_id} 
                     res = requests.post(LIBRARY_EXIT_ENDPOINT, json=payload, timeout=10)
 
-                    if res.status_code == 200 or res.status_code == 201:
+                    if res.status_code in (200, 201):
                         data = res.json()
-                        print(f"Server: {data.get('message')}")
+                        print(f"Server: {data.get('message')}  open_gate={data.get('open_gate')}")
+                        if data.get('open_gate'):
+                            trigger_local_arduino("OPEN_LIBRARY")
                     else:
-                        print(f"Server error: {res.text}")
+                        print(f"Server error: {res.status_code} {res.text}")
 
                 except Exception as e:
                     print(f"Network error: {e}")
