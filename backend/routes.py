@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, render_template
-from models import Student, Trip, db
+from models import Student, Trip, db, BlockLimit
 from scheduler import schedule_trip_check, cancel_trip_check
 from datetime import datetime, timedelta
 import json
@@ -7,10 +7,6 @@ from arduino_service import open_hostel_gate, open_library_gate
 
 api = Blueprint('api', __name__)
 
-TRIP_LIMITS = {
-    'A': 15, 'D1': 15, 'D2': 15,
-    'B': 10, 'C': 10
-}
 DEFAULT_LIMIT = 10
 
 @api.route('/')
@@ -72,6 +68,32 @@ def get_encodings():
             'encoding': json.loads(student.face_encoding)
         }
     return jsonify(encodings), 200
+
+@api.route('/admin/get_limits', methods=['GET'])
+def get_limits():
+    limits = BlockLimit.query.all()
+    return jsonify([l.to_dict() for l in limits]), 200
+
+@api.route('/admin/update_limit', methods=['POST'])
+def update_limit():
+    data = request.json
+    block = data.get('block', '').upper()
+    minutes = data.get('minutes')
+
+    if not block or minutes is None:
+        return jsonify({'error': 'Missing block name or minutes'}), 400
+
+    # Find existing or create new
+    limit_entry = BlockLimit.query.filter_by(block_name=block).first()
+    if limit_entry:
+        limit_entry.minutes = int(minutes)
+    else:
+        limit_entry = BlockLimit(block_name=block, minutes=int(minutes))
+        db.session.add(limit_entry)
+    
+    db.session.commit()
+    return jsonify({'message': f'Limit for Block {block} updated to {minutes} minutes'}), 200
+
 def process_scan(student_id, current_location):
     target_location = "Library" if current_location == "Hostel" else "Hostel"
     direction_label = f"{current_location} -> {target_location}"
@@ -112,7 +134,8 @@ def process_scan(student_id, current_location):
         return jsonify({'message': 'Trip already in progress', 'open_gate': False}), 200
 
     # Start new trip
-    duration = TRIP_LIMITS.get(student.block.upper(), DEFAULT_LIMIT)
+    block_config = BlockLimit.query.filter_by(block_name=student.block.upper()).first()
+    duration = block_config.minutes if block_config else DEFAULT_LIMIT
     start_time = datetime.now()
     expected_end_time = start_time + timedelta(minutes=duration)
 

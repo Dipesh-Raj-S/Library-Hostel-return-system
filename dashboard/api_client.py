@@ -53,3 +53,24 @@ def del_student_api(regno):
             st.error("Failed to delete.")
     except Exception as e:
         st.error(f"Error: {e}")
+
+def fetch_block_limits():
+    """Fetches block time limits from the DB"""
+    try:
+        res = requests.get(f"{API_BASE_URL}/admin/get_limits", timeout=2)
+        return res.json() if res.status_code == 200 else []
+
+    except Exception as e:
+        st.error(f"Error fetching limits: {e}")
+        return []
+
+def update_block_limit(block, minutes):
+    """Sends new limit to the API"""
+    try:
+        payload = {"block": block, "minutes": int(minutes)}
+        res = requests.post(f"{API_BASE_URL}/admin/update_limit", json=payload, timeout=3)
+        return res.status_code == 200
+
+    except Exception as e:
+        st.error(f"Error updating limit: {e}")
+        return False

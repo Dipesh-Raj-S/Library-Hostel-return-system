@@ -2,6 +2,7 @@ from flask import Flask
 from config import Config
 from database import db
 from routes import api
+from models import BlockLimit
 from scheduler import start_scheduler
 
 def create_app():
@@ -14,6 +15,13 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+
+        if not BlockLimit.query.first():
+            defaults = {'A': 15, 'D1': 15, 'D2': 15, 'B': 10, 'C': 10}
+            for b, m in defaults.items():
+                db.session.add(BlockLimit(block_name=b, minutes=m))
+            db.session.commit()
+
         start_scheduler()
 
     return app

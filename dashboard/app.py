@@ -1,5 +1,5 @@
 import streamlit as st
-from dashboard.modules import alerts, logs, registration, timers
+from dashboard.modules import alerts, logs, registration, timers, settings
 
 st.set_page_config(
     page_title="Warden Dashboard",
@@ -8,7 +8,7 @@ st.set_page_config(
 )
 
 st.title("🛡️ Hostel Warden Dashboard")
-page = st.sidebar.radio("Navigation", ["Active Timers", "Alerts", "Student Logs", "Registered Students"])
+page = st.sidebar.radio("Navigation", ["Active Timers", "Alerts", "Student Logs", "Registered Students", "Settings"])
 
 if page == "Active Timers":
     timers.render_active_timers()
@@ -23,3 +23,7 @@ elif page == "Student Logs":
 elif page == "Registered Students":
     st.header("📋 Registered Students")
     registration.render_registration_table()
+
+elif page == "Settings":
+    st.header(":material/settings: Trip Limit Settings")
+    settings.render_settings()

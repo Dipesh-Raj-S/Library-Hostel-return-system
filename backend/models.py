@@ -20,6 +20,14 @@ class Student(db.Model):
             'created_at': self.created_at.isoformat()
         }
 
+class BlockLimit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    block_name = db.Column(db.String(10), unique=True, nullable=False) 
+    minutes = db.Column(db.Integer, nullable=False, default=10)
+
+    def to_dict(self):
+        return { 'block': self.block_name, 'minutes': self.minutes }
+
 class Trip(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
