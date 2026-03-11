@@ -22,6 +22,10 @@ def create_app():
                 db.session.add(BlockLimit(block_name=b, minutes=m))
             db.session.commit()
 
+        # make sure the Arduino controller is initialised early so that
+        # connection errors show up on startup rather than on first scan
+        from arduino_service import get_gate_controller
+        get_gate_controller()
         start_scheduler()
 
     return app
