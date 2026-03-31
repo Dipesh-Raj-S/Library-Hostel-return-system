@@ -6,34 +6,9 @@ The system consists of three main nodes:
 2. **Laptop B (Hostel Gate)**: Captures student entry and controls the gate.
 3. **Backend Server**: Central database and logic handler.
 
-## Architecture Diagram (Mermaid)
+## Architecture Diagram
 
-```mermaid
-graph TD
-    subgraph Library Gate [Laptop A]
-        CamA[Webcam] --> FaceRecA[Face Recognition Script]
-        FaceRecA -->|POST /library_exit| API[Backend API]
-    end
-
-    subgraph Hostel Gate [Laptop B]
-        CamB[Webcam] --> FaceRecB[Face Recognition Script]
-        FaceRecB -->|POST /hostel_entry| API
-        API -->|Response: OK| FaceRecB
-        FaceRecB -->|Serial 'OPEN'| Arduino[Arduino UNO]
-        Arduino -->|Signal| Relay[Gate Relay]
-    end
-
-    subgraph Server [Backend]
-        API --> DB[(SQLite Database)]
-        API --> Scheduler[Timer Scheduler]
-        Scheduler -->|Check Time| DB
-    end
-
-    subgraph Dashboard [Warden Laptop]
-        Streamlit[Streamlit App] -->|GET /active_timers| API
-        Streamlit -->|GET /alerts| API
-    end
-```
+![](workflow.jpg)
 
 ## API Flow
 
