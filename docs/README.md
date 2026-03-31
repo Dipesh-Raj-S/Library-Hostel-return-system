@@ -1,4 +1,4 @@
-# Smart Entry and Exit System
+# Timed Entry and Return Monitoring System
 
 A timed end-to-end system for tracking student travel times between the library and the hostel using face recognition, a backend, a dashboard, and Arduino-based gate control.
 
@@ -11,7 +11,7 @@ A timed end-to-end system for tracking student travel times between the library 
 ## Prerequisites
 - Python 3.10
 - Arduino IDE (to upload sketch)
-- Webcam (for testing)
+- Webcam
 - Arduino UNO + Relay (optional, for hardware demo)
 
 ## Installation
@@ -82,3 +82,9 @@ python -m face_recog.hostel_gate
 For late alerts, add `NTFY_SRVR` and `NTFY_TOPIC` in `.env`. 
 
 When a student exceeds the time limit, a notification is sent the to the specified `ntfy` URL.
+
+## Authors
+
+- [Dipesh Raj S](https://github.com/Dipesh-Raj-S) 
+- [Siddharth Arumugam](https://github.com/0xMrNight)
+- [R Madhumitha](https://github.com/madhu89-70)
