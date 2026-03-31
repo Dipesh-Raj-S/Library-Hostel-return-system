@@ -102,8 +102,8 @@ def process_scan(student_id, current_location):
     if not student:
         return jsonify({'error': 'Student not found'}), 404
 
-    # Atomic check for active trips
-    active_trip = Trip.query.filter_by(student_id=student_id, status='active').first()
+    # Atomic check for unfinished trips (could be 'active' or 'late' if already expired)
+    active_trip = Trip.query.filter_by(student_id=student_id, end_time=None).first()
 
     if active_trip:
         # Check if they are arriving at the destination of their current trip
@@ -168,8 +168,8 @@ def process_scan(student_id, current_location):
 
 @api.route('/trip_logs', methods=['GET'])
 def trip_logs():
-    # Fetch trips that are NOT active, ordered by most recent first
-    logs = Trip.query.filter(Trip.status != 'active').order_by(Trip.start_time.desc()).limit(100).all()
+    # Fetch trips that ARE finished, ordered by most recent first
+    logs = Trip.query.filter(Trip.end_time != None).order_by(Trip.start_time.desc()).limit(100).all()
     return jsonify([t.to_dict() for t in logs]), 200
 
 @api.route('/scan_library', methods=['POST'])
@@ -182,7 +182,8 @@ def scan_hostel():
 
 @api.route('/active_timers', methods=['GET'])
 def active_timers():
-    trips = Trip.query.filter_by(status='active').all()
+    # Show all trips that haven't ended yet (active or late)
+    trips = Trip.query.filter(Trip.end_time == None).all()
     return jsonify([t.to_dict() for t in trips]), 200
 
 @api.route('/alerts', methods=['GET'])

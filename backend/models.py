@@ -44,7 +44,7 @@ class Trip(db.Model):
     
     is_alert = db.Column(db.Boolean, default=False, index=True)
 
-    student = db.relationship('Student', backref=db.backref('trips', lazy=True))
+    student = db.relationship('Student', backref=db.backref('trips', lazy=True, cascade='all, delete-orphan'))
 
     def to_dict(self):
         return {
